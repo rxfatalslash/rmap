@@ -1,13 +1,22 @@
 use std::{collections::HashSet, net::{Ipv4Addr, TcpStream, ToSocketAddrs}, time::Duration};
 use chrono::Local;
+use rand::Rng;
 use clap::{command, Arg};
 use tz::TimeZone;
 use colored::*;
 
-fn parse_args(target: &str, ports: &str, timeout: &str) -> (String, Vec<u16>, String) {
+fn opt_to_str(opt: Option<&String>) -> String {
+    match opt {
+        Some(s) => s.clone(),
+        None => String::new()
+    }
+}
+
+fn parse_args(target: &str, ports: &str, timeout: Option<&String>) -> (String, Vec<u16>, String) {
     let mut ip_addr = String::new();
     let mut prt = Vec::new();
     let mut tout = String::new();
+    let ti = opt_to_str(timeout);
 
     match target.parse::<Ipv4Addr>() {
         Ok(ip) => {
@@ -45,9 +54,11 @@ fn parse_args(target: &str, ports: &str, timeout: &str) -> (String, Vec<u16>, St
         }
     }
 
-    match timeout.parse::<u16>() {
-        Ok(t) => tout = t.to_string(),
-        Err(_) => eprint!("[{}] Introduce a number", "ERROR".red())
+    if timeout.is_some() {
+        match ti.parse::<u16>() {
+            Ok(t) => tout = t.to_string(),
+            Err(_) => eprint!("[{}] Introduce a number", "ERROR".red())
+        }
     }
 
     (ip_addr, prt, tout)
@@ -58,9 +69,16 @@ fn scan_ports(ip: &str, ports: &[u16], timeout: String) -> (Vec<u16>, Vec<u16>) 
     let mut closed_ports: Vec<u16> = Vec::new();
     let mut tout: u64 = 0;
 
-    match timeout.parse::<u64>() {
-        Ok(t) => tout = t,
-        Err(_) => {}
+    if timeout.is_empty() {
+        let mut rng = rand::thread_rng();
+        let rand_number: u64 = rng.gen_range(10..60);
+
+        tout = rand_number;
+    } else {
+        match timeout.parse::<u64>() {
+            Ok(t) => tout = t,
+            Err(_) => {}
+        }
     }
 
     for &port in ports.iter() {
@@ -68,7 +86,7 @@ fn scan_ports(ip: &str, ports: &[u16], timeout: String) -> (Vec<u16>, Vec<u16>) 
             .to_socket_addrs()
             .unwrap();
         
-        match TcpStream::connect_timeout(&target.next().unwrap(), Duration::from_secs(tout)) {
+        match TcpStream::connect_timeout(&target.next().unwrap(), Duration::from_millis(tout)) {
             Ok(_) => open_ports.push(port),
             Err(_) => closed_ports.push(port)
         }
@@ -101,13 +119,12 @@ fn main() {
             .help("Timeout")
             .short('t')
             .long("timeout")
-            .default_value("10")
         )
         .get_matches();
 
     let target = result_matches.get_one::<String>("TARGET").unwrap();
     let ports = result_matches.get_one::<String>("PORTS").unwrap();
-    let timeout = result_matches.get_one::<String>("TIMEOUT").unwrap();
+    let timeout = result_matches.try_get_one::<String>("TIMEOUT").unwrap();
 
     let (ip_addr, mut prt, tout) = parse_args(target, ports, timeout);
 
