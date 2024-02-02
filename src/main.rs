@@ -100,7 +100,6 @@ fn main() {
         .name("rmap")
         .version("0.1")
         .author("rxfatalslash")
-        .about("Port scanner written in Rust")
         .arg(
             Arg::new("TARGET")
             .help("IP address to scan")
