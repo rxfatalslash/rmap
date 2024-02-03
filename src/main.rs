@@ -1,4 +1,4 @@
-use std::{collections::HashSet, net::{Ipv4Addr, TcpStream, ToSocketAddrs}, time::Duration};
+use std::{net::{Ipv4Addr, TcpStream, ToSocketAddrs}, time::Duration};
 use chrono::Local;
 use rand::Rng;
 use clap::{command, Arg};
@@ -12,27 +12,39 @@ fn opt_to_str(opt: Option<&String>) -> String {
     }
 }
 
-fn parse_args(target: &str, ports: &str, timeout: Option<&String>) -> (String, Vec<u16>, String) {
-    let mut ip_addr = String::new();
+fn parse_args(target: &str, ports: &str, timeout: Option<&String>) -> (Vec<String>, Vec<u16>, String) {
+    let mut ip_addr = Vec::new();
+    let mut _ip_target = Vec::new();
     let mut prt = Vec::new();
     let mut tout = String::new();
     let ti = opt_to_str(timeout);
+    let parts: Vec<&str> = target.split(|c| c == '.').collect();
 
-    match target.parse::<Ipv4Addr>() {
-        Ok(ip) => {
-            ip_addr = ip.to_string();
-            let date = Local::now().format("%Y-%m-%d %H:%M:%S");
-            let tz = TimeZone::local()
-                .expect("Failed to get local timezone");
-            let tz_name = tz
-                .find_current_local_time_type()
-                .expect("Failed to get local timezone name")
-                .time_zone_designation();
+    if target.contains(",") {
+        _ip_target = target.split(|c| c == ',')
+            .map(|x| x.parse::<String>().unwrap())
+            .collect();
+    } else if let Some(last_part) = parts.last() {
+        match last_part {
+            &"0" => {
+                let p: Vec<&str> = parts.iter().take(3).cloned().collect();
+                let new_ip = p.join(".");
 
-            println!("Starting Rmap 0.1 at {} {}", date, tz_name);
-            println!("Rmap scan report for {}", ip_addr);
+                for i in 1..=255 {
+                    let t = format!("{}.{}", new_ip, i);
+
+                    _ip_target.push(t);
+                }
+            }
+            _ => {}
         }
-        Err(_) => eprint!("[{}] Introduce a valid IP address", "ERROR".red())
+    }
+
+    for t in _ip_target {
+        match t.parse::<Ipv4Addr>() {
+            Ok(ip) => ip_addr.push(ip.to_string()),
+            Err(_) => eprint!("[{}] Introduce a valid IP address", "ERROR".red())
+        }
     }
 
     if ports.contains("-") {
@@ -64,10 +76,18 @@ fn parse_args(target: &str, ports: &str, timeout: Option<&String>) -> (String, V
     (ip_addr, prt, tout)
 }
 
-fn scan_ports(ip: &str, ports: &[u16], timeout: String) -> (Vec<u16>, Vec<u16>) {
-    let mut open_ports: Vec<u16> = Vec::new();
-    let mut closed_ports: Vec<u16> = Vec::new();
+fn scan_ports(ip: &[String], ports: &[u16], timeout: String) {
     let mut tout: u64 = 0;
+    let mut op_p: Vec<u16> = Vec::new();
+    let mut no_dup_sort: Vec<&u16> = ports.into_iter().collect();
+    no_dup_sort.sort();
+    let date = Local::now().format("%Y-%m-%d %H:%M:%S");
+    let tz = TimeZone::local()
+        .expect("Failed to get local timezone");
+    let tz_name = tz
+        .find_current_local_time_type()
+        .expect("Failed to get local timezone name")
+        .time_zone_designation();
 
     if timeout.is_empty() {
         let mut rng = rand::thread_rng();
@@ -81,18 +101,44 @@ fn scan_ports(ip: &str, ports: &[u16], timeout: String) -> (Vec<u16>, Vec<u16>) 
         }
     }
 
-    for &port in ports.iter() {
-        let mut target = format!("{}:{}", ip, port)
-            .to_socket_addrs()
-            .unwrap();
-        
-        match TcpStream::connect_timeout(&target.next().unwrap(), Duration::from_millis(tout)) {
-            Ok(_) => open_ports.push(port),
-            Err(_) => closed_ports.push(port)
+    println!("Starting Rmap 0.1.1 at {} {}", date, tz_name);
+
+    for t in ip {
+        let mut open_ports: Vec<u16> = Vec::new();
+        let mut closed_ports: Vec<u16> = Vec::new();
+
+        for &port in ports.iter() {
+            let mut target = format!("{}:{}", t, port)
+                .to_socket_addrs()
+                .unwrap();
+            
+            match TcpStream::connect_timeout(&target.next().unwrap(), Duration::from_millis(tout)) {
+                Ok(_) => {
+                    open_ports.push(port);
+                    op_p.push(port);
+                },
+                Err(_) => closed_ports.push(port)
+            }
+        }
+
+        if open_ports.len() > 0 {
+            println!("Rmap scan report for {}", t);
+
+            println!(
+                "{} closed ports",
+                (no_dup_sort.len() - open_ports.len())
+            );
+
+            println!("PORT\tSTATE");
+            for port in &open_ports {
+                println!("{}\t{}", port, "open".green());
+            }
         }
     }
 
-    (open_ports, closed_ports)
+    if op_p.len() == 0 {
+        println!("No port open on the hosts");
+    }
 }
 
 fn main() {
@@ -136,18 +182,5 @@ fn main() {
         }
     }
 
-    let no_dup: HashSet<u16> = prt.clone().into_iter().collect();
-    let mut no_dup_sort: Vec<u16> = no_dup.into_iter().collect();
-    no_dup_sort.sort();
-
-    let (open_ports, _closed_ports) = scan_ports(&ip_addr, &prt, tout);
-
-    println!(
-        "{} closed ports",
-        (no_dup_sort.len() - open_ports.len())
-    );
-    println!("PORT\tSTATE");
-    for port in open_ports {
-        println!("{}\t{}", port, "open".green());
-    }
+    scan_ports(&ip_addr, &prt, tout);
 }
