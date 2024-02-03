@@ -148,7 +148,7 @@ fn main() {
         .author("rxfatalslash")
         .arg(
             Arg::new("TARGET")
-            .help("IP address to scan, use , to scan one or more hosts, or enter an ip of type x.x.x.0 to scan all hosts on the network")
+            .help("IP address to scan, use , to scan one or more hosts, or enter an ip of type X.X.X.0 to scan all hosts on the network")
             .index(1)
             .required(true)
         )
