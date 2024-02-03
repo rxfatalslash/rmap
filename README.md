@@ -35,11 +35,11 @@ $ ./rmap -h
 Usage: rmap [OPTIONS] <TARGET>
 
 Arguments:
-  <TARGET>  IP address to scan
+  <TARGET>  IP address to scan, use , to scan one or more hosts, or enter an ip of type x.x.x.0 to scan all hosts on the network
 
 Options:
-  -p, --ports <PORTS>      Ports to scan [default: 1-1024]
-  -t, --timeout <TIMEOUT>  Timeout
+  -p, --ports <PORTS>      Ports to scan, use , to scan one or more ports, - to scan a range between this values, _ to scan the entire port range [default: 1-1024]
+  -t, --timeout <TIMEOUT>  Timeout in milliseconds, the default value is a random number between 0 and 60
   -h, --help               Print help
   -V, --version            Print version
 ```

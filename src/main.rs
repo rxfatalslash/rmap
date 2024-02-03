@@ -43,7 +43,7 @@ fn parse_args(target: &str, ports: &str, timeout: Option<&String>) -> (Vec<Strin
     for t in _ip_target {
         match t.parse::<Ipv4Addr>() {
             Ok(ip) => ip_addr.push(ip.to_string()),
-            Err(_) => eprint!("[{}] Introduce a valid IP address", "ERROR".red())
+            Err(_) => eprint!("[{}] Enter a valid IP address", "ERROR".red())
         }
     }
 
@@ -69,7 +69,7 @@ fn parse_args(target: &str, ports: &str, timeout: Option<&String>) -> (Vec<Strin
     if timeout.is_some() {
         match ti.parse::<u16>() {
             Ok(t) => tout = t.to_string(),
-            Err(_) => eprint!("[{}] Introduce a number", "ERROR".red())
+            Err(_) => eprint!("[{}] Enter a number", "ERROR".red())
         }
     }
 
@@ -144,24 +144,24 @@ fn scan_ports(ip: &[String], ports: &[u16], timeout: String) {
 fn main() {
     let result_matches = command!()
         .name("rmap")
-        .version("0.1")
+        .version("0.1.1")
         .author("rxfatalslash")
         .arg(
             Arg::new("TARGET")
-            .help("IP address to scan")
+            .help("IP address to scan, use , to scan one or more hosts, or enter an ip of type x.x.x.0 to scan all hosts on the network")
             .index(1)
             .required(true)
         )
         .arg(
             Arg::new("PORTS")
-            .help("Ports to scan")
+            .help("Ports to scan, use , to scan one or more ports, - to scan a range between this values, _ to scan the entire port range")
             .short('p')
             .long("ports")
             .default_value("1-1024")
         )
         .arg(
             Arg::new("TIMEOUT")
-            .help("Timeout")
+            .help("Timeout in milliseconds, the default value is a random number between 0 and 60")
             .short('t')
             .long("timeout")
         )
