@@ -35,7 +35,7 @@ $ ./rmap -h
 Usage: rmap [OPTIONS] <TARGET>
 
 Arguments:
-  <TARGET>  IP address to scan, use , to scan one or more hosts, or enter an ip of type x.x.x.0 to scan all hosts on the network
+  <TARGET>  IP address to scan, use , to scan one or more hosts, or enter an ip of type X.X.X.0 to scan all hosts on the network
 
 Options:
   -p, --ports <PORTS>      Ports to scan, use , to scan one or more ports, - to scan a range between this values, _ to scan the entire port range [default: 1-1024]
