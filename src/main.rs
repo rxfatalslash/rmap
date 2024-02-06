@@ -20,23 +20,20 @@ fn parse_args(target: &str, ports: &str, timeout: Option<&String>) -> (Vec<Strin
     let ti = opt_to_str(timeout);
     let parts: Vec<&str> = target.split(|c| c == '.').collect();
 
-    if target.contains(",") {
+    if target.contains(|c| c == ',') {
         _ip_target = target.split(|c| c == ',')
             .map(|x| x.parse::<String>().unwrap())
             .collect();
     } else if let Some(last_part) = parts.last() {
-        match last_part {
-            &"0" => {
-                let p: Vec<&str> = parts.iter().take(3).cloned().collect();
-                let new_ip = p.join(".");
+        if last_part == &"0" {
+            let p: Vec<&str> = parts.iter().take(3).cloned().collect();
+            let new_ip = p.join(".");
 
-                for i in 1..=255 {
-                    let t = format!("{}.{}", new_ip, i);
+            for i in 1..=255 {
+                let t = format!("{}.{}", new_ip, i);
 
-                    _ip_target.push(t);
-                }
+                _ip_target.push(t);
             }
-            _ => {}
         }
     }
 
@@ -47,15 +44,11 @@ fn parse_args(target: &str, ports: &str, timeout: Option<&String>) -> (Vec<Strin
         }
     }
 
-    if ports.contains("-") {
+    if ports.contains(|c| c == '-') {
         prt = ports.split(|c| c == '-')
             .map(|x| x.parse::<u16>().unwrap())
             .collect();
-    } else if ports.contains(",") {
-        prt = ports.split(|c| c == ',')
-            .map(|x| x.parse::<u16>().unwrap())
-            .collect();
-    } else if ports.contains("_") {
+    } else if ports.contains(|c| c == '_') {
         for p in 1..=65535 {
             prt.push(p);
         }
@@ -79,7 +72,7 @@ fn parse_args(target: &str, ports: &str, timeout: Option<&String>) -> (Vec<Strin
 fn scan_ports(ip: &[String], ports: &[u16], timeout: String) {
     let mut tout: u64 = 0;
     let mut op_p: Vec<u16> = Vec::new();
-    let mut no_dup_sort: Vec<&u16> = ports.into_iter().collect();
+    let mut no_dup_sort: Vec<&u16> = ports.iter().collect();
     no_dup_sort.sort();
     let date = Local::now().format("%Y-%m-%d %H:%M:%S");
     let tz = TimeZone::local()
@@ -94,11 +87,8 @@ fn scan_ports(ip: &[String], ports: &[u16], timeout: String) {
         let rand_number: u64 = rng.gen_range(10..60);
 
         tout = rand_number;
-    } else {
-        match timeout.parse::<u64>() {
-            Ok(t) => tout = t,
-            Err(_) => {}
-        }
+    } else if let Ok(t) = timeout.parse::<u64>() {
+            tout = t;
     }
 
     println!("Starting Rmap 0.1.1 at {} {}", date, tz_name);
@@ -121,7 +111,7 @@ fn scan_ports(ip: &[String], ports: &[u16], timeout: String) {
             }
         }
 
-        if open_ports.len() > 0 {
+        if !open_ports.is_empty() {
             println!("Rmap scan report for {}", t);
 
             println!(
@@ -136,7 +126,7 @@ fn scan_ports(ip: &[String], ports: &[u16], timeout: String) {
         }
     }
 
-    if op_p.len() == 0 {
+    if op_p.is_empty() {
         println!("No port open on the hosts");
     }
 }
@@ -173,7 +163,7 @@ fn main() {
 
     let (ip_addr, mut prt, tout) = parse_args(target, ports, timeout);
 
-    if ports.contains("-") {
+    if ports.contains(|c| c == '-') {
         let start_port = prt[0];
         let end_port = prt[1];
 
